@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, Args, Arg, ArgGroup, ArgAction, command};
+use clap::{command, Arg, ArgAction, ArgGroup, Args, Parser, Subcommand};
 use divoom::*;
 use webex;
 
@@ -12,43 +12,57 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about="Run status integration with Pixoo Device")]
-    Run { 
-        #[arg(short='c', help="Webex integration client ID")]
+    #[command(about = "Run status integration with Pixoo Device")]
+    Run {
+        #[arg(short = 'c', help = "Webex integration client ID")]
         integration_client_id: String,
-        #[arg(short='s', help="Webex integration secret")]
+        #[arg(short = 's', help = "Webex integration secret")]
         integration_secret_id: String,
-        #[arg(short='d', help="Webex device ID (if not provided, a new Webex device will be created)")]
+        #[arg(
+            short = 'd',
+            help = "Webex device ID (if not provided, a new Webex device will be created)"
+        )]
         webex_device_id: Option<String>,
-        #[arg(short='p', help="ID of Divoom Pixoo device (can be supressed if there's only a single device present in the local network)")]
-        pixoo_device_id: Option<String>
+        #[arg(
+            short = 'p',
+            help = "ID of Divoom Pixoo device (can be supressed if there's only a single device present in the local network)"
+        )]
+        pixoo_device_id: Option<String>,
     },
-    #[command(about="List Divoom Pixoo devices available in the local network")]
-    ListPixooDevices
+    #[command(about = "List Divoom Pixoo devices available in the local network")]
+    ListPixooDevices,
 }
 
-#[tokio::main]
-async fn main() {
-
-    let cli = Cli::parse();
-
-    std::process::exit(1);
-
+async fn list_pixoo_devices_on_screen() {
     println!("Looking for Divoom devices...");
-
     let divoom = DivoomServiceClient::new();
     let devices = divoom
         .get_same_lan_devices()
         .await
         .expect("error getting same lan devices");
+    if devices.is_empty() {
+        println!("No devices found.");
+    } else {
+        for device in devices {
+            println!(
+                "Device ID: {} | Device Name: {} | Device IP: {}",
+                device.device_id, device.device_name, device.device_private_ip
+            )
+        }
+    }
+}
 
-    let device = devices
-        .first()
-        .expect("no Divoom device found in local network");
+#[tokio::main]
+async fn main() {
+    let cli = Cli::parse();
 
-    println!("{:?}", device);
-
-    panic!("hey");
+    match &cli.command {
+        Commands::ListPixooDevices => {
+            list_pixoo_devices_on_screen().await;
+            std::process::exit(0);
+        }
+        _ => (),
+    }
 
     // let webex_authenticator = webex::auth::DeviceAuthenticator::new(
     //     &args.integration_client_id,
