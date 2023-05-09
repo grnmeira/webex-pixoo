@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "4.2.5", features = ["derive"] }
+clap = { version = "4.2.5", features = ["derive", "cargo"] }
 divoom = "0.1.42"
 tokio = "1.28.0"
 webex = { git = "https://github.com/grnmeira/webex-dev-api.git", version = "0.1.0" }
