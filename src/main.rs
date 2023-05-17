@@ -1,4 +1,4 @@
-use clap::{command, Arg, ArgAction, ArgGroup, Args, Parser, Subcommand};
+use clap::{command, Parser, Subcommand};
 use divoom::*;
 use webex;
 
@@ -17,7 +17,7 @@ enum Commands {
         #[arg(short = 'c', help = "Webex integration client ID")]
         integration_client_id: String,
         #[arg(short = 's', help = "Webex integration secret")]
-        integration_secret_id: String,
+        integration_secret: String,
         #[arg(
             short = 'd',
             help = "Webex device ID (if not provided, a new Webex device will be created)"
@@ -52,6 +52,40 @@ async fn list_pixoo_devices_on_screen() {
     }
 }
 
+async fn run(
+    integration_client_id: &str,
+    integration_secret: &str,
+    pixoo_device_id: Option<&str>,
+    webex_device_id: Option<&str>,
+) {
+    let divoom_client = DivoomServiceClient::new();
+
+    let divoom_devices = divoom_client
+        .get_same_lan_devices()
+        .await
+        .unwrap_or_else(|e| {
+            println!("Error while looking for Divoom devices: {}", e);
+            std::process::exit(1);
+        });
+
+    let divoom_device = if let Some(device_id) = pixoo_device_id {
+        divoom_devices
+            .iter()
+            .find(|d| d.device_id.to_string() == device_id)
+            .unwrap_or_else(|| {
+                println!("No Divoom device found with ID {}", device_id);
+                std::process::exit(1);
+            })
+    } else {
+        divoom_devices.first().unwrap_or_else(|| {
+            println!("No Divoom device found!");
+            std::process::exit(1);
+        })
+    };
+
+    println!("{:?}", divoom_device);
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
@@ -59,9 +93,21 @@ async fn main() {
     match &cli.command {
         Commands::ListPixooDevices => {
             list_pixoo_devices_on_screen().await;
-            std::process::exit(0);
         }
-        _ => (),
+        Commands::Run {
+            integration_client_id,
+            integration_secret,
+            pixoo_device_id,
+            webex_device_id,
+        } => {
+            run(
+                integration_client_id.as_str(),
+                integration_secret.as_str(),
+                pixoo_device_id.as_ref().map(|s| s.as_str()),
+                webex_device_id.as_ref().map(|s| s.as_str()),
+            )
+            .await;
+        }
     }
 
     // let webex_authenticator = webex::auth::DeviceAuthenticator::new(
