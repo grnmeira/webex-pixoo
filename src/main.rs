@@ -1,6 +1,6 @@
 use clap::{command, Parser, Subcommand};
 use divoom::*;
-use webex;
+use webex::{self, api::Data::SubscriptionUpdate};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -68,6 +68,8 @@ async fn run(
             std::process::exit(1);
         });
 
+    println!("Looking for Divoom devices...");
+
     let divoom_device = if let Some(device_id) = pixoo_device_id {
         divoom_devices
             .iter()
@@ -83,7 +85,62 @@ async fn run(
         })
     };
 
-    println!("{:?}", divoom_device);
+    println!(
+        "Divoom device found: {}, IP address: {}",
+        divoom_device.device_name, divoom_device.device_private_ip
+    );
+
+    let webex_authenticator =
+        webex::auth::DeviceAuthenticator::new(integration_client_id, integration_secret);
+
+    let verification_token = webex_authenticator.verify().await.unwrap_or_else(|error| {
+        // TODO: webex crate needs to implement Display for Error
+        println!("Error obtaining verification token: {:#?}", error);
+        std::process::exit(1);
+    });
+
+    println!(
+        "Please access the following URL to authenticate your device: {}",
+        verification_token.verification_uri_complete
+    );
+
+    let bearer_token = webex_authenticator
+        .wait_for_authentication(&verification_token)
+        .await
+        .unwrap_or_else(|error| {
+            // TODO: webex crate needs to implement Display for Error
+            println!("Failure authenticating: {:#?}", error);
+            std::process::exit(1);
+        });
+
+    println!("Webex authentication succeeded!");
+
+    let webex_client = webex::api::Client::new(&bearer_token, webex_device_id);
+    let mut event_listener = webex_client
+        .listen_to_events()
+        .await
+        .unwrap_or_else(|error| {
+            println!("Error trying to listen to Webex events: {:#?}", error);
+            std::process::exit(1);
+        });
+
+    println!("Running...");
+
+    loop {
+        let event = event_listener.next().await.unwrap();
+        let Some(event_data) = event.data else {
+            continue;
+        };
+        let (subject, category, status) = match event_data {
+            SubscriptionUpdate {
+                subject,
+                category,
+                status,
+            } => (subject, category, status),
+            _ => continue,
+        };
+        println!("{:?} {:?} {:?}", subject, category, status);
+    }
 }
 
 #[tokio::main]
@@ -109,42 +166,6 @@ async fn main() {
             .await;
         }
     }
-
-    // let webex_authenticator = webex::auth::DeviceAuthenticator::new(
-    //     &args.integration_client_id,
-    //     &args.integration_client_secret,
-    // );
-
-    // let verification_token = webex_authenticator.verify().await.unwrap_or_else(|error| {
-    //     // TODO: webex crate needs to implement Display for Error
-    //     panic!("error obtaining verification token: {:#?}", error);
-    // });
-
-    // println!(
-    //     "Please access the following URL to authenticate your device: {}",
-    //     verification_token.verification_uri_complete
-    // );
-
-    // let bearer_token = webex_authenticator
-    //     .wait_for_authentication(&verification_token)
-    //     .await
-    //     .unwrap_or_else(|error| {
-    //         // TODO: webex crate needs to implement Display for Error
-    //         panic!("failure authenticating: {:#?}", error);
-    //     });
-
-    // let webex_client = webex::api::Client::new(&bearer_token, None);
-    // let mut event_listener = webex_client
-    //     .listen_to_events()
-    //     .await
-    //     .unwrap_or_else(|error| {
-    //         panic!("error trying to listen to Webex events: {:#?}", error);
-    //     });
-
-    // loop {
-    //     let event = event_listener.next().await.unwrap();
-    //     println!("{:#?}", event);
-    // }
 
     // let client =
     //     PixooClient::new(device.device_private_ip.as_str()).expect("not able to connect to device");
