@@ -28,6 +28,10 @@ enum Commands {
             help = "ID of Divoom Pixoo device (can be supressed if there's only a single device present in the local network)"
         )]
         pixoo_device_id: Option<String>,
+        #[arg(help = "URL to 64x64 pixels GIF used when in meeting")]
+        gif_url_in_meeting: String,
+        #[arg(help = "URL to 64x64 pixels GIF used when available")]
+        gif_url_available: String,
     },
     #[command(about = "List Divoom Pixoo devices available in the local network")]
     ListPixooDevices,
@@ -57,6 +61,8 @@ async fn run(
     integration_secret: &str,
     pixoo_device_id: Option<&str>,
     webex_device_id: Option<&str>,
+    gif_url_in_meeting: &str,
+    gif_url_available: &str,
 ) {
     let divoom_client = DivoomServiceClient::new();
 
@@ -80,13 +86,13 @@ async fn run(
             })
     } else {
         divoom_devices.first().unwrap_or_else(|| {
-            println!("No Divoom device found!");
+            println!("No Pixoo device found!");
             std::process::exit(1);
         })
     };
 
     println!(
-        "Divoom device found: {}, IP address: {}",
+        "Pixoo device found: {}, IP address: {}",
         divoom_device.device_name, divoom_device.device_private_ip
     );
 
@@ -94,7 +100,7 @@ async fn run(
         webex::auth::DeviceAuthenticator::new(integration_client_id, integration_secret);
 
     let verification_token = webex_authenticator.verify().await.unwrap_or_else(|error| {
-        // TODO: webex crate needs to implement Display for Error
+        // TODO: webex::auth crate needs to implement Display for Error
         println!("Error obtaining verification token: {:#?}", error);
         std::process::exit(1);
     });
@@ -108,7 +114,7 @@ async fn run(
         .wait_for_authentication(&verification_token)
         .await
         .unwrap_or_else(|error| {
-            // TODO: webex crate needs to implement Display for Error
+            // TODO: webex::auth crate needs to implement Display for Error
             println!("Failure authenticating: {:#?}", error);
             std::process::exit(1);
         });
@@ -123,6 +129,11 @@ async fn run(
             println!("Error trying to listen to Webex events: {:#?}", error);
             std::process::exit(1);
         });
+
+    println!("Connecting to Pixoo device...");
+
+    let pixoo_client = PixooClient::new(divoom_device.device_private_ip.as_str())
+        .expect("not able to connect to Pixoo device");
 
     println!("Running...");
 
@@ -156,12 +167,15 @@ async fn main() {
             integration_secret,
             pixoo_device_id,
             webex_device_id,
+            gif_url_in_meeting,
+            gif_url_available,
         } => {
             run(
                 integration_client_id.as_str(),
                 integration_secret.as_str(),
                 pixoo_device_id.as_ref().map(|s| s.as_str()),
                 webex_device_id.as_ref().map(|s| s.as_str()),
+                gif_url_in_meeting.to_str(),
             )
             .await;
         }
