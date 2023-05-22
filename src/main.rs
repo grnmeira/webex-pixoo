@@ -1,5 +1,6 @@
 use clap::{command, Parser, Subcommand};
 use divoom::*;
+use std::time::Duration;
 use webex::{self, api::Data::SubscriptionUpdate};
 
 #[derive(Parser)]
@@ -28,10 +29,10 @@ enum Commands {
             help = "ID of Divoom Pixoo device (can be supressed if there's only a single device present in the local network)"
         )]
         pixoo_device_id: Option<String>,
-        #[arg(help = "URL to 64x64 pixels GIF used when in meeting")]
-        gif_url_in_meeting: String,
-        #[arg(help = "URL to 64x64 pixels GIF used when available")]
-        gif_url_available: String,
+        #[arg(help = "Path to 64x64 pixels GIF file used when in meeting")]
+        gif_in_meeting: String,
+        #[arg(help = "Path to 64x64 pixels GIF file used when available")]
+        gif_available: String,
     },
     #[command(about = "List Divoom Pixoo devices available in the local network")]
     ListPixooDevices,
@@ -65,20 +66,14 @@ async fn update_pixoo_from_user_status(
     match status {
         "meeting" => {
             pixoo_client
-                .play_gif_file(
-                    DivoomFileAnimationSourceType::Url,
-                    in_meeting_gif.to_string(),
-                )
+                .render_gif_as_animation(64, Duration::from_millis(100), in_meeting_gif)
                 .await
                 .expect("not able to play gif");
             println!("Status changed to \"IN MEETING\"");
         }
         _ => {
             pixoo_client
-                .play_gif_file(
-                    DivoomFileAnimationSourceType::Url,
-                    available_gif.to_string(),
-                )
+                .render_gif_as_animation(64, Duration::from_millis(100), available_gif)
                 .await
                 .expect("not able to play gif");
             println!("Status changed to \"AVAILABLE\"");
@@ -91,8 +86,8 @@ async fn run(
     integration_secret: &str,
     pixoo_device_id: Option<&str>,
     webex_device_id: Option<&str>,
-    gif_url_in_meeting: &str,
-    gif_url_available: &str,
+    gif_in_meeting: &str,
+    gif_available: &str,
 ) {
     let divoom_client = DivoomServiceClient::new();
 
@@ -174,8 +169,8 @@ async fn run(
 
     update_pixoo_from_user_status(
         &pixoo_client,
-        gif_url_in_meeting,
-        gif_url_available,
+        gif_in_meeting,
+        gif_available,
         user_details.status.as_str(),
     )
     .await;
@@ -189,8 +184,8 @@ async fn run(
 
         let status = match event_data {
             SubscriptionUpdate {
-                subject,
-                category,
+                subject: _,
+                category: _,
                 status,
             } => status,
             _ => None,
@@ -199,8 +194,8 @@ async fn run(
         if let Some(status) = status {
             update_pixoo_from_user_status(
                 &pixoo_client,
-                gif_url_in_meeting,
-                gif_url_available,
+                gif_in_meeting,
+                gif_available,
                 status.as_str(),
             )
             .await;
@@ -221,16 +216,16 @@ async fn main() {
             integration_secret,
             pixoo_device_id,
             webex_device_id,
-            gif_url_in_meeting,
-            gif_url_available,
+            gif_in_meeting,
+            gif_available,
         } => {
             run(
                 integration_client_id.as_str(),
                 integration_secret.as_str(),
                 pixoo_device_id.as_ref().map(|s| s.as_str()),
                 webex_device_id.as_ref().map(|s| s.as_str()),
-                gif_url_in_meeting.as_str(),
-                gif_url_available.as_str(),
+                gif_in_meeting.as_str(),
+                gif_available.as_str(),
             )
             .await;
         }
