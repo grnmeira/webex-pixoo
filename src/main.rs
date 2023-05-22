@@ -56,6 +56,36 @@ async fn list_pixoo_devices_on_screen() {
     }
 }
 
+async fn update_pixoo_from_user_status(
+    pixoo_client: &PixooClient,
+    in_meeting_gif: &str,
+    available_gif: &str,
+    status: &str,
+) {
+    match status {
+        "meeting" => {
+            pixoo_client
+                .play_gif_file(
+                    DivoomFileAnimationSourceType::Url,
+                    in_meeting_gif.to_string(),
+                )
+                .await
+                .expect("not able to play gif");
+            println!("Status changed to \"IN MEETING\"");
+        }
+        _ => {
+            pixoo_client
+                .play_gif_file(
+                    DivoomFileAnimationSourceType::Url,
+                    available_gif.to_string(),
+                )
+                .await
+                .expect("not able to play gif");
+            println!("Status changed to \"AVAILABLE\"");
+        }
+    }
+}
+
 async fn run(
     integration_client_id: &str,
     integration_secret: &str,
@@ -137,20 +167,44 @@ async fn run(
 
     println!("Running...");
 
+    let user_details = webex_client
+        .get_my_own_details()
+        .await
+        .expect("not able to get user's own details");
+
+    update_pixoo_from_user_status(
+        &pixoo_client,
+        gif_url_in_meeting,
+        gif_url_available,
+        user_details.status.as_str(),
+    )
+    .await;
+
     loop {
         let event = event_listener.next().await.unwrap();
+
         let Some(event_data) = event.data else {
             continue;
         };
-        let (subject, category, status) = match event_data {
+
+        let status = match event_data {
             SubscriptionUpdate {
                 subject,
                 category,
                 status,
-            } => (subject, category, status),
-            _ => continue,
+            } => status,
+            _ => None,
         };
-        println!("{:?} {:?} {:?}", subject, category, status);
+
+        if let Some(status) = status {
+            update_pixoo_from_user_status(
+                &pixoo_client,
+                gif_url_in_meeting,
+                gif_url_available,
+                status.as_str(),
+            )
+            .await;
+        }
     }
 }
 
@@ -175,25 +229,10 @@ async fn main() {
                 integration_secret.as_str(),
                 pixoo_device_id.as_ref().map(|s| s.as_str()),
                 webex_device_id.as_ref().map(|s| s.as_str()),
-                gif_url_in_meeting.to_str(),
+                gif_url_in_meeting.as_str(),
+                gif_url_available.as_str(),
             )
             .await;
         }
     }
-
-    // let client =
-    //     PixooClient::new(device.device_private_ip.as_str()).expect("not able to connect to device");
-
-    // let channel = client
-    //     .get_current_channel()
-    //     .await
-    //     .expect("error obtaining device channel");
-
-    // println!("{:#?}", channel);
-
-    // let gif_url = "https://opengameart.org/sites/default/files/styles/medium/public/kaczuha_1.gif";
-    // client
-    //     .play_gif_file(DivoomFileAnimationSourceType::Url, gif_url.to_string())
-    //     .await
-    //     .expect("not able to play gif");
 }
