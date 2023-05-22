@@ -24,4 +24,4 @@ Some other CLI options are available in the CLI:
 # Disclaimers
 * This crate does not have any official relations with Cisco.
 * It's been tested only with Pixoo-64 devices at the moment.
-* The GIFs used for the display must be 64x64 pixel GIFs.
+* The GIFs used for the display must be 64x64 pixels GIFs.
