@@ -15,7 +15,7 @@ Device ID: <Device ID> | Device Name: Pixoo64 | Device IP: <Device IP>
 ## Displaying meeting status
 In order to display your status using the Pixoo device you should use the `run` command as follows:
 ```
-$ webex-pixoo run -c <Your Webex Integration ID> -s <Your Webex Integration Secret> <A URL to your "IN MEETING" GIF> <A URL to your "AVAILABLE" GIF>
+$ webex-pixoo run -c <Your Webex Integration ID> -s <Your Webex Integration Secret> <Path to your "IN MEETING" GIF> <Path to your "AVAILABLE" GIF>
 ```
 # Other CLI options
 Some other CLI options are available in the CLI:
