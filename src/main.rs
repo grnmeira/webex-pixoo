@@ -1,7 +1,7 @@
 use clap::{command, Parser, Subcommand};
 use divoom::*;
 use std::time::Duration;
-use webex::{self, api::Data::SubscriptionUpdate};
+use webex::{self, dto::Data::SubscriptionUpdate};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
