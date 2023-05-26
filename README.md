@@ -1,5 +1,10 @@
 # Webex/Pixoo Integration
+
+<img align="right" src="https://github.com/grnmeira/webex-pixoo/assets/6223242/dfc1859a-c983-4b42-b72f-578c9ad741e8"/>
+
 Are you tired of working from home and being interrupted during calls by people that live with you? This Webex/Pixoo integration is the solution. This binary crate provides an integration between [Webex](www.webex.com) and [Divoom Pixoo-64](https://divoom.com/products/pixoo-64), wich will display different GIF animations depending on your Webex status (in meeting or available). All that in a (blazingly fast and memory safe)™️ way.
+
+**Be advised that some young people may find GIFs "cringe".**
 # Usage
 This is a binary crate and can easily be compiled using `cargo build` and it provides a CLI interface for use. It will also require a Webex Integration, which can be created in the [Webex for developers](https://developer.webex.com/docs/integrations) portal. Once the integration is created, you'll need its "client ID" and "client secret", both should be provided by the Webex portal for integrations in the "OAuth Settings" for your Webex Integration.
 ## Listing Pixoo devices
@@ -17,6 +22,7 @@ In order to display your status using the Pixoo device you should use the `run` 
 ```
 $ webex-pixoo run -c <Your Webex Integration ID> -s <Your Webex Integration Secret> <Path to your "IN MEETING" GIF> <Path to your "AVAILABLE" GIF>
 ```
+You'll be presented with a URL so you can authenticate with your Webex Integration. Once it's authenticated, it should start picking up your status.
 # Other CLI options
 Some other CLI options are available in the CLI:
 * `-d <device ID>`: You can provide a Webex Device ID to reuse previous registered Webex Devices you used before, if not provided, a new one is created.
